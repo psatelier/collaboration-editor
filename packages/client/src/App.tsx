@@ -5,17 +5,16 @@ import Text from '@tiptap/extension-text'
 import Bold from '@tiptap/extension-bold'
 import Italic from '@tiptap/extension-italic'
 
+const STORAGE_KEY = 'collaboration-editor-doc'
+
 function App() {
+  const savedDoc = localStorage.getItem(STORAGE_KEY)
+
   const editor = useEditor({
     extensions: [Document, Paragraph, Text, Bold, Italic],
-    content: '<p>Start typing here.</p>',
-    onTransaction: ({ transaction }) => {
-      if (transaction.docChanged) {
-        console.log(
-          'steps:',
-          transaction.steps.map((step) => step.toJSON()),
-        )
-      }
+    content: savedDoc ? JSON.parse(savedDoc) : '<p>Start typing here.</p>',
+    onUpdate: ({ editor }) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(editor.state.doc.toJSON()))
     },
   })
 
