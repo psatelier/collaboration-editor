@@ -5,6 +5,7 @@ import Paragraph from '@tiptap/extension-paragraph'
 import Text from '@tiptap/extension-text'
 import Bold from '@tiptap/extension-bold'
 import Italic from '@tiptap/extension-italic'
+import { CrdtTextarea } from './CrdtTextarea'
 
 const STORAGE_KEY = 'collaboration-editor-doc'
 
@@ -55,6 +56,8 @@ function App() {
         </button>
       </div>
       <EditorContent editor={editor} />
+      <hr />
+      <CrdtTextarea />
     </div>
   )
 }
