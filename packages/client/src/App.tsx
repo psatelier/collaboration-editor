@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
@@ -19,27 +18,6 @@ function App() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(editor.state.doc.toJSON()))
     },
   })
-
-  useEffect(() => {
-    const socket = new WebSocket('ws://localhost:8080')
-
-    socket.addEventListener('open', () => {
-      console.log('Connected to server')
-      socket.send('hello from client')
-    })
-
-    socket.addEventListener('message', (event) => {
-      console.log('Received from server:', event.data)
-    })
-
-    socket.addEventListener('close', () => {
-      console.log('Disconnected from server')
-    })
-
-    return () => {
-      socket.close()
-    }
-  }, [])
 
   if (!editor) {
     return null

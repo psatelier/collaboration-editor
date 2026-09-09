@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { RgaText, type CrdtOp } from '@collaboration-editor/shared'
 
 function diffToOps(doc: RgaText, oldValue: string, newValue: string): CrdtOp[] {
@@ -28,14 +28,45 @@ function diffToOps(doc: RgaText, oldValue: string, newValue: string): CrdtOp[] {
 }
 
 export function CrdtTextarea() {
-  const docRef = useRef(new RgaText('local'))
+  const docRef = useRef<RgaText | null>(null)
+  if (docRef.current === null) {
+    docRef.current = new RgaText(crypto.randomUUID())
+  }
+
+  const socketRef = useRef<WebSocket | null>(null)
   const [value, setValue] = useState('')
 
-  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+  useEffect(() => {
+    const socket = new WebSocket('ws://localhost:8080')
+    socketRef.current = socket
+
+    socket.addEventListener('message', (event) => {
+      const op: CrdtOp = JSON.parse(event.data)
+      console.log('Received op:', op)
+      docRef.current!.applyRemote(op)
+      setValue(docRef.current!.toString())
+    })
+
+    return () => {
+      socket.close()
+    }
+  }, [])
+
+    const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = event.target.value
-    const ops = diffToOps(docRef.current, value, newValue)
-    console.log('Generated ops:', ops)
-    setValue(docRef.current.toString())
+    const ops = diffToOps(docRef.current!, value, newValue)
+    console.log('Sending ops:', ops)
+
+    const socket = socketRef.current
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      for (const op of ops) {
+        socket.send(JSON.stringify(op))
+      }
+    } else {
+      console.warn('Not connected — these ops stay local for now:', ops)
+    }
+
+    setValue(docRef.current!.toString())
   }
 
   return (
