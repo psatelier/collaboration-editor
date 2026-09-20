@@ -1,9 +1,12 @@
+import { useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
 import Text from '@tiptap/extension-text'
 import Bold from '@tiptap/extension-bold'
 import Italic from '@tiptap/extension-italic'
+import { RgaText } from '@collaboration-editor/shared'
+import { stepToOps } from './prosemirrorBridge'
 import { CrdtTextarea } from './CrdtTextarea'
 
 const STORAGE_KEY = 'collaboration-editor-doc'
@@ -11,11 +14,22 @@ const STORAGE_KEY = 'collaboration-editor-doc'
 function App() {
   const savedDoc = localStorage.getItem(STORAGE_KEY)
 
+  const crdtRef = useRef<RgaText | null>(null)
+  if (crdtRef.current === null) {
+    crdtRef.current = new RgaText(crypto.randomUUID())
+  }
+
   const editor = useEditor({
     extensions: [Document, Paragraph, Text, Bold, Italic],
     content: savedDoc ? JSON.parse(savedDoc) : '<p>Start typing here.</p>',
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(editor.state.doc.toJSON()))
+
+      for (const step of transaction.steps) {
+        const ops = stepToOps(crdtRef.current!, step.toJSON())
+        console.log('Generated CRDT ops:', ops)
+      }
+      console.log('CRDT now thinks the document is:', crdtRef.current!.toRichText())
     },
   })
 
