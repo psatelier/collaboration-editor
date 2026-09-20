@@ -32,3 +32,27 @@ console.log('Replica C (all 4 ops applied in a shuffled order):', replicaC.toStr
 const converged =
   replicaA.toString() === replicaB.toString() && replicaB.toString() === replicaC.toString()
 console.log(converged ? '✅ All three replicas converged.' : '❌ Divergence detected!')
+
+console.log('\n--- Mark convergence test ---')
+
+const markReplicaA = new RgaText('A')
+const sharedOps = typeString(markReplicaA, 'Hi')
+
+const markReplicaB = new RgaText('B')
+for (const op of sharedOps) markReplicaB.applyRemote(op)
+
+console.log('Replica A before marks:', markReplicaA.toRichText())
+console.log('Replica B before marks:', markReplicaB.toRichText())
+
+const boldOnOps = markReplicaA.localSetMark(0, 1, 'bold', true)
+const boldOffOps = markReplicaB.localSetMark(0, 1, 'bold', false)
+
+for (const op of boldOffOps) markReplicaA.applyRemote(op)
+for (const op of boldOnOps) markReplicaB.applyRemote(op)
+
+console.log('Replica A after conflicting bold ops:', markReplicaA.toRichText())
+console.log('Replica B after conflicting bold ops:', markReplicaB.toRichText())
+
+const marksConverged =
+  JSON.stringify(markReplicaA.toRichText()) === JSON.stringify(markReplicaB.toRichText())
+console.log(marksConverged ? '✅ Mark state converged.' : '❌ Mark divergence detected!')
