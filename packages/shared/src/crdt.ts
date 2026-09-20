@@ -141,6 +141,34 @@ export class RgaText {
     return result
   }
 
+  visibleIndexOf(id: CharId): number | null {
+    let count = -1
+    let found: number | null = null
+
+    const visit = (node: CrdtNode) => {
+      if (found !== null) return
+      if (node !== this.root && !node.deleted) {
+        count++
+        if (node.id.site === id.site && node.id.counter === id.counter) {
+          found = count
+          return
+        }
+      }
+      for (const child of node.children) {
+        if (found !== null) return
+        visit(child)
+      }
+    }
+
+    visit(this.root)
+    return found
+  }
+
+  getMark(id: CharId, mark: MarkType): boolean {
+    const node = this.nodesById.get(this.key(id))
+    return node?.marks.get(mark)?.value ?? false
+  }
+
   private applyInsert(op: InsertOp) {
     if (this.nodesById.has(this.key(op.id))) {
       return

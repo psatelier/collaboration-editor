@@ -1,3 +1,4 @@
+import type { Editor } from '@tiptap/core'
 import { RgaText, type CrdtOp, type MarkType } from '@collaboration-editor/shared'
 
 interface StepJSON {
@@ -17,6 +18,10 @@ interface StepJSON {
 // Valid only for our current schema: a single paragraph, no other block-level nodes.
 function pmPosToVisibleIndex(pos: number): number {
   return pos - 1
+}
+
+function visibleIndexToPmPos(visibleIndex: number): number {
+  return visibleIndex + 1
 }
 
 export function stepToOps(doc: RgaText, step: StepJSON): CrdtOp[] {
@@ -53,4 +58,37 @@ export function stepToOps(doc: RgaText, step: StepJSON): CrdtOp[] {
   }
 
   return ops
+}
+
+export function applyRemoteOp(doc: RgaText, editor: Editor | null, op: CrdtOp) {
+  if (!editor) return
+
+  if (op.type === 'insert') {
+    doc.applyRemote(op)
+    const visibleIndex = doc.visibleIndexOf(op.id)
+    if (visibleIndex === null) return
+    const tr = editor.state.tr.insertText(op.char, visibleIndexToPmPos(visibleIndex))
+    tr.setMeta('remote', true)
+    editor.view.dispatch(tr)
+  } else if (op.type === 'delete') {
+    const visibleIndex = doc.visibleIndexOf(op.id)
+    doc.applyRemote(op)
+    if (visibleIndex === null) return
+    const pos = visibleIndexToPmPos(visibleIndex)
+    const tr = editor.state.tr.delete(pos, pos + 1)
+    tr.setMeta('remote', true)
+    editor.view.dispatch(tr)
+  } else {
+    doc.applyRemote(op)
+    const visibleIndex = doc.visibleIndexOf(op.target)
+    if (visibleIndex === null) return
+    const pos = visibleIndexToPmPos(visibleIndex)
+    const value = doc.getMark(op.target, op.mark)
+    const markType = editor.schema.marks[op.mark]
+    const tr = value
+      ? editor.state.tr.addMark(pos, pos + 1, markType.create())
+      : editor.state.tr.removeMark(pos, pos + 1, markType)
+    tr.setMeta('remote', true)
+    editor.view.dispatch(tr)
+  }
 }
