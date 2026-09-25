@@ -29,6 +29,14 @@ export interface MarkOp {
 
 export type CrdtOp = InsertOp | DeleteOp | MarkOp
 
+export interface SerializedNode {
+  id: CharId
+  char: string
+  deleted: boolean
+  parentId: CharId | null
+  marks: Array<[MarkType, { value: boolean; timestamp: CharId }]>
+}
+
 interface MarkState {
   value: boolean
   timestamp: CharId
@@ -61,6 +69,27 @@ export class RgaText {
   private nodesById = new Map<string, CrdtNode>()
 
   constructor(private siteId: SiteId) {}
+
+  static deserialize(siteId: SiteId, nodes: SerializedNode[]): RgaText {
+    const doc = new RgaText(siteId)
+    let maxCounterForSite = -1
+
+    for (const n of nodes) {
+      doc.applyInsert({ type: 'insert', id: n.id, char: n.char, parentId: n.parentId })
+      if (n.deleted) {
+        doc.applyDelete({ type: 'delete', id: n.id })
+      }
+      for (const [mark, state] of n.marks) {
+        doc.applyMark({ type: 'mark', target: n.id, mark, value: state.value, timestamp: state.timestamp })
+      }
+      if (n.id.site === siteId) {
+        maxCounterForSite = Math.max(maxCounterForSite, n.id.counter)
+      }
+    }
+
+    doc.counter = maxCounterForSite + 1
+    return doc
+  }
 
   private key(id: CharId): string {
     return `${id.site}:${id.counter}`
@@ -138,6 +167,27 @@ export class RgaText {
       }
     }
     visit(this.root)
+    return result
+  }
+
+  serialize(): SerializedNode[] {
+    const result: SerializedNode[] = []
+    const visit = (node: CrdtNode, parentId: CharId | null) => {
+      if (node !== this.root) {
+        result.push({
+          id: node.id,
+          char: node.char,
+          deleted: node.deleted,
+          parentId,
+          marks: Array.from(node.marks.entries()),
+        })
+      }
+      const idForChildren = node === this.root ? null : node.id
+      for (const child of node.children) {
+        visit(child, idForChildren)
+      }
+    }
+    visit(this.root, null)
     return result
   }
 

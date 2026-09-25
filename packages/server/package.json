@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch --ignore './data/**' src/index.ts"
   },
   "dependencies": {
+    "@collaboration-editor/shared": "^0.0.0",
     "ws": "^8.21.3"
   },
   "devDependencies": {
